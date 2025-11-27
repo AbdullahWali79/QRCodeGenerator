@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
 
     // Handle center text - render text in center of QR code using Sharp for SVG rendering
     if (centerText && centerText.trim()) {
+      console.log('Processing center text:', { centerText, centerTextSize, centerTextColor, centerTextBold })
       try {
         // Use Sharp to render SVG text (avoids canvas font family issues)
         const fontSize = centerTextSize || 24
@@ -232,32 +233,32 @@ export async function POST(request: NextRequest) {
 </svg>`
         
         // Use Sharp to convert SVG to PNG buffer
-        const textBuffer = await sharp(Buffer.from(svg))
-          .png()
-          .toBuffer()
-        
-        // Load with Jimp for compositing
-        const textImage = await Jimp.read(textBuffer)
-        
-        // Keep white circle visible - only make pixels outside the circle area transparent
-        // The white circle should remain visible for text readability
-        // We'll keep all white pixels as they are part of the circle background
-        
-        // Composite text onto QR code
-        finalImage.composite(textImage, 0, 0, {
-          mode: Jimp.BLEND_SOURCE_OVER,
-          opacitySource: 1.0,
-          opacityDest: 1.0,
-        })
+        try {
+          const textBuffer = await sharp(Buffer.from(svg))
+            .png()
+            .toBuffer()
+          
+          // Load with Jimp for compositing
+          const textImage = await Jimp.read(textBuffer)
+          
+          // Composite text onto QR code
+          finalImage.composite(textImage, 0, 0, {
+            mode: Jimp.BLEND_SOURCE_OVER,
+            opacitySource: 1.0,
+            opacityDest: 1.0,
+          })
+          
+          console.log('Center text successfully added to QR code')
+        } catch (sharpError) {
+          console.error('Sharp SVG rendering error:', sharpError)
+          // Continue without text if Sharp fails
+          // Don't throw error, just log it
+        }
       } catch (textError) {
         console.error('Error processing center text:', textError)
-        const errorMsg = textError instanceof Error ? textError.message : String(textError)
-        
-        // Return error with details
-        return new Response(
-          JSON.stringify({ error: `Failed to add center text: ${errorMsg}` }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        )
+        // Don't return error - continue without center text
+        // This ensures QR code is still generated even if text fails
+        console.warn('Continuing QR code generation without center text due to error')
       }
     }
 
