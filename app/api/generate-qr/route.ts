@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle center text - render using Sharp with better error handling
+    // Handle center text - use simple SVG with web-safe fonts
     if (centerText && centerText.trim()) {
       try {
         console.log('Processing center text:', { centerText, centerTextSize, centerTextColor, centerTextBold })
@@ -183,11 +183,12 @@ export async function POST(request: NextRequest) {
         const centerY = size / 2
         const startY = centerY - (totalHeight / 2) + fontSize
         
-        // Create SVG with white circle and text
-        const whiteCircle = `<circle cx="${centerX}" cy="${centerY}" r="${finalRadius}" fill="white" fill-opacity="0.98" stroke="#cccccc" stroke-width="2"/>`
-        
+        // Parse text color
         const textColor = centerTextColor || '#000000'
         const finalTextColor = (textColor === '#ffffff' || textColor === '#fff' || textColor.toLowerCase() === 'white') ? '#000000' : textColor
+        
+        // Create simple SVG with web-safe font - use absolute positioning
+        const whiteCircle = `<circle cx="${centerX}" cy="${centerY}" r="${finalRadius}" fill="white" fill-opacity="0.98" stroke="#cccccc" stroke-width="2"/>`
         
         const svgText = lines.map((line: string, index: number) => {
           const y = startY + (index * lineHeight)
@@ -199,24 +200,44 @@ export async function POST(request: NextRequest) {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;')
           
-          return `<text x="50%" y="${y}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${finalTextColor}" stroke="white" stroke-width="3" stroke-opacity="1" paint-order="stroke fill" text-anchor="middle" dominant-baseline="middle">${escapedLine}</text>`
+          // Use absolute positioning and web-safe font
+          return `<text x="${centerX}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="${fontWeight}" fill="${finalTextColor}" stroke="white" stroke-width="2" text-anchor="middle" alignment-baseline="middle">${escapedLine}</text>`
         }).join('\n')
         
-        const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+        // Create SVG with proper namespace and structure
+        const svg = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   ${whiteCircle}
   ${svgText}
 </svg>`
         
-        // Use Sharp with proper configuration for Vercel
-        const textBuffer = await sharp(Buffer.from(svg), {
-          density: 72,
-          limitInputPixels: false
-        })
-          .png()
-          .toBuffer()
+        console.log('SVG created, length:', svg.length)
+        console.log('Converting SVG to PNG with Sharp...')
         
+        // Use Sharp to render SVG with explicit settings
+        let textBuffer: Buffer
+        try {
+          textBuffer = await sharp(Buffer.from(svg), {
+            density: 100,
+            limitInputPixels: 268402689
+          })
+            .resize(size, size, {
+              fit: 'contain',
+              background: { r: 0, g: 0, b: 0, alpha: 0 }
+            })
+            .png()
+            .toBuffer()
+          
+          console.log('Sharp conversion successful, buffer size:', textBuffer.length)
+        } catch (sharpError) {
+          console.error('Sharp error:', sharpError)
+          throw sharpError
+        }
+        
+        console.log('Loading buffer with Jimp...')
         const textImage = await Jimp.read(textBuffer)
+        console.log('Text image loaded, size:', textImage.bitmap.width, 'x', textImage.bitmap.height)
         
         // Composite text onto QR code
         finalImage.composite(textImage, 0, 0, {
@@ -228,8 +249,8 @@ export async function POST(request: NextRequest) {
         console.log('Center text successfully added to QR code')
       } catch (textError) {
         console.error('Error processing center text:', textError)
-        console.warn('Continuing QR code generation without center text')
-        // Don't throw - continue without text
+        console.error('Error details:', textError instanceof Error ? textError.stack : String(textError))
+        // Don't throw - continue without text so QR code still generates
       }
     }
 
