@@ -3,6 +3,8 @@ import QRCode from 'qrcode'
 import Jimp from 'jimp'
 import sharp from 'sharp'
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -169,7 +171,7 @@ export async function POST(request: NextRequest) {
         // Use smaller padding to avoid covering too much QR code area
         // This ensures QR code remains scannable
         const padding = fontSize * 0.8
-        const maxLineWidth = Math.max(...lines.map(l => l.length))
+        const maxLineWidth = Math.max(...lines.map((l: string) => l.length))
         const estimatedTextWidth = maxLineWidth * fontSize * 0.6
         
         // Calculate circle radius - keep it compact to preserve QR code scannability
@@ -194,7 +196,7 @@ export async function POST(request: NextRequest) {
         
         // Create SVG with white circle and text
         // Add text stroke/outline for better visibility
-        const svgText = lines.map((line, index) => {
+        const svgText = lines.map((line: string, index: number) => {
           const y = startY + (index * lineHeight)
           const fontWeight = centerTextBold ? 'bold' : 'normal'
           // Escape XML special characters
@@ -262,13 +264,11 @@ export async function POST(request: NextRequest) {
     // Convert to PNG buffer
     const pngBuffer = await finalImage.getBufferAsync(Jimp.MIME_PNG)
 
-    // Return PNG buffer - convert Buffer to Uint8Array for NextResponse compatibility
-    // Fixed TypeScript error by converting Buffer to Uint8Array
-    return new NextResponse(new Uint8Array(pngBuffer), {
+    // Return PNG buffer - convert Buffer to Uint8Array for Response compatibility
+    return new Response(new Uint8Array(pngBuffer), {
       status: 200,
       headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        "Content-Type": "image/png",
       },
     })
   } catch (error) {
