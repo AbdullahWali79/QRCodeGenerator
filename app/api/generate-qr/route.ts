@@ -200,8 +200,21 @@ export async function POST(request: NextRequest) {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;')
           
-          // Use absolute positioning and web-safe font
-          return `<text x="${centerX}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="${fontWeight}" fill="${finalTextColor}" stroke="white" stroke-width="2" text-anchor="middle" alignment-baseline="middle">${escapedLine}</text>`
+          // Use absolute positioning with explicit font - ensure text is visible
+          // Draw text with white stroke first, then fill for better visibility
+          return `
+            <text x="${centerX}" y="${y}" 
+                  font-family="Arial, Helvetica, sans-serif" 
+                  font-size="${fontSize}" 
+                  font-weight="${fontWeight}" 
+                  fill="${finalTextColor}" 
+                  stroke="white" 
+                  stroke-width="3" 
+                  stroke-opacity="1"
+                  paint-order="stroke fill"
+                  text-anchor="middle" 
+                  dominant-baseline="middle"
+                  style="font-family: Arial, Helvetica, sans-serif;">${escapedLine}</text>`
         }).join('\n')
         
         // Create SVG with proper namespace and structure
@@ -215,24 +228,27 @@ export async function POST(request: NextRequest) {
         console.log('SVG created, length:', svg.length)
         console.log('Converting SVG to PNG with Sharp...')
         
-        // Use Sharp to render SVG with explicit settings
+        // Use Sharp to render SVG - don't resize, let SVG handle size
         let textBuffer: Buffer
         try {
-          textBuffer = await sharp(Buffer.from(svg), {
-            density: 100,
-            limitInputPixels: 268402689
-          })
-            .resize(size, size, {
-              fit: 'contain',
-              background: { r: 0, g: 0, b: 0, alpha: 0 }
-            })
+          textBuffer = await sharp(Buffer.from(svg))
             .png()
             .toBuffer()
           
           console.log('Sharp conversion successful, buffer size:', textBuffer.length)
         } catch (sharpError) {
-          console.error('Sharp error:', sharpError)
-          throw sharpError
+          console.error('Sharp SVG rendering error:', sharpError)
+          console.error('SVG content (first 500 chars):', svg.substring(0, 500))
+          // Try without resize
+          try {
+            textBuffer = await sharp(Buffer.from(svg))
+              .png()
+              .toBuffer()
+            console.log('Sharp retry successful')
+          } catch (retryError) {
+            console.error('Sharp retry also failed:', retryError)
+            throw retryError
+          }
         }
         
         console.log('Loading buffer with Jimp...')
