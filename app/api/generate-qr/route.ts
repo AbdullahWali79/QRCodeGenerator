@@ -262,8 +262,8 @@ export async function POST(request: NextRequest) {
     // Convert to PNG buffer
     const pngBuffer = await finalImage.getBufferAsync(Jimp.MIME_PNG)
 
-    // Return PNG buffer - convert Buffer to compatible type for NextResponse
-    return new NextResponse(pngBuffer as unknown as BodyInit, {
+    // Return PNG buffer - convert Buffer to Uint8Array for NextResponse compatibility
+    return new NextResponse(new Uint8Array(pngBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
