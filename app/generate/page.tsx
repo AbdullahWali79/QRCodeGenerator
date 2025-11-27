@@ -425,7 +425,10 @@ export default function GeneratePage() {
                       onChange={(e) => setCenterTextSize(Number(e.target.value))}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     >
+                      <option value={12}>12px</option>
+                      <option value={14}>14px</option>
                       <option value={16}>16px</option>
+                      <option value={18}>18px</option>
                       <option value={20}>20px</option>
                       <option value={24}>24px</option>
                       <option value={28}>28px</option>
