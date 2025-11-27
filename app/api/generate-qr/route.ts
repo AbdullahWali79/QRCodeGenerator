@@ -12,38 +12,38 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!type || !size) {
-      return NextResponse.json(
-        { error: 'Missing required fields: type and size' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: type and size' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
     // Validate type-specific fields
     if (type === 'text' && !text) {
-      return NextResponse.json(
-        { error: 'Text is required for text type' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Text is required for text type' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
     if (type === 'url' && !url) {
-      return NextResponse.json(
-        { error: 'URL is required for url type' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'URL is required for url type' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
     if (type === 'logo' && !logo) {
-      return NextResponse.json(
-        { error: 'Logo is required for logo type' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Logo is required for logo type' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
     if (type === 'background' && !bgImage) {
-      return NextResponse.json(
-        { error: 'Background image is required for background type' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Background image is required for background type' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
       // For logo and background types, use text or url
       qrContent = text || url
       if (!qrContent) {
-        return NextResponse.json(
-          { error: 'Text or URL is required for logo and background types' },
-          { status: 400 }
+        return new Response(
+          JSON.stringify({ error: 'Text or URL is required for logo and background types' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -100,9 +100,9 @@ export async function POST(request: NextRequest) {
         })
       } catch (logoError) {
         console.error('Error processing logo:', logoError)
-        return NextResponse.json(
-          { error: 'Failed to process logo image' },
-          { status: 500 }
+        return new Response(
+          JSON.stringify({ error: 'Failed to process logo image' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -151,9 +151,9 @@ export async function POST(request: NextRequest) {
         finalImage = bgImageJimp
       } catch (bgError) {
         console.error('Error processing background:', bgError)
-        return NextResponse.json(
-          { error: 'Failed to process background image' },
-          { status: 500 }
+        return new Response(
+          JSON.stringify({ error: 'Failed to process background image' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -254,9 +254,9 @@ export async function POST(request: NextRequest) {
         const errorMsg = textError instanceof Error ? textError.message : String(textError)
         
         // Return error with details
-        return NextResponse.json(
-          { error: `Failed to add center text: ${errorMsg}` },
-          { status: 500 }
+        return new Response(
+          JSON.stringify({ error: `Failed to add center text: ${errorMsg}` }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
         )
       }
     }
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
     // Convert to PNG buffer
     const pngBuffer = await finalImage.getBufferAsync(Jimp.MIME_PNG)
 
-    // Return PNG buffer - convert Buffer to Uint8Array for Response compatibility
+    // Return PNG buffer (fixed for Vercel / Web Response)
     return new Response(new Uint8Array(pngBuffer), {
       status: 200,
       headers: {
@@ -273,9 +273,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error generating QR code:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate QR code' },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to generate QR code' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
 }
