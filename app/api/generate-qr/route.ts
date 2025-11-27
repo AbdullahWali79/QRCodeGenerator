@@ -158,49 +158,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle center text - render text in center of QR code using Sharp for SVG rendering
+    // Handle center text - render using Sharp with better error handling
     if (centerText && centerText.trim()) {
-      console.log('Processing center text:', { centerText, centerTextSize, centerTextColor, centerTextBold })
       try {
-        // Use Sharp to render SVG text (avoids canvas font family issues)
+        console.log('Processing center text:', { centerText, centerTextSize, centerTextColor, centerTextBold })
+        
         const fontSize = centerTextSize || 24
         const lines = centerText.split('\n')
         const lineHeight = fontSize * 1.2
         const totalHeight = lines.length * lineHeight
         
-        // Calculate circle size based on text dimensions
-        // Use smaller padding to avoid covering too much QR code area
-        // This ensures QR code remains scannable
+        // Calculate circle size
         const padding = fontSize * 0.8
         const maxLineWidth = Math.max(...lines.map((l: string) => l.length))
         const estimatedTextWidth = maxLineWidth * fontSize * 0.6
-        
-        // Calculate circle radius - keep it compact to preserve QR code scannability
         const circleRadius = Math.max(
           (totalHeight / 2) + padding,
           (estimatedTextWidth / 2) + padding
         )
-        
-        // Limit maximum circle size to preserve QR code integrity
-        // Circle should not exceed 25% of QR code size
         const maxRadius = size * 0.12
         const finalRadius = Math.min(circleRadius, maxRadius)
         
-        // Center position for circle and text
         const centerX = size / 2
         const centerY = size / 2
         const startY = centerY - (totalHeight / 2) + fontSize
         
-        // Create white circle background with border for better visibility
-        // Using solid white for better text readability
+        // Create SVG with white circle and text
         const whiteCircle = `<circle cx="${centerX}" cy="${centerY}" r="${finalRadius}" fill="white" fill-opacity="0.98" stroke="#cccccc" stroke-width="2"/>`
         
-        // Create SVG with white circle and text
-        // Add text stroke/outline for better visibility
+        const textColor = centerTextColor || '#000000'
+        const finalTextColor = (textColor === '#ffffff' || textColor === '#fff' || textColor.toLowerCase() === 'white') ? '#000000' : textColor
+        
         const svgText = lines.map((line: string, index: number) => {
           const y = startY + (index * lineHeight)
           const fontWeight = centerTextBold ? 'bold' : 'normal'
-          // Escape XML special characters
           const escapedLine = line
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -208,22 +199,7 @@ export async function POST(request: NextRequest) {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;')
           
-          // Use darker color for better visibility, ensure it's not too light
-          const textColor = centerTextColor || '#000000'
-          // If color is too light, use black
-          const finalTextColor = (textColor === '#ffffff' || textColor === '#fff' || textColor.toLowerCase() === 'white') ? '#000000' : textColor
-          
-          // Add text with white stroke/outline for better visibility against white background
-          // Using multiple strokes for better visibility
-          return `
-            <text x="50%" y="${y}" font-size="${fontSize}" font-weight="${fontWeight}" 
-                  fill="${finalTextColor}" 
-                  stroke="white" 
-                  stroke-width="3" 
-                  stroke-opacity="1"
-                  paint-order="stroke fill"
-                  text-anchor="middle" 
-                  dominant-baseline="middle">${escapedLine}</text>`
+          return `<text x="50%" y="${y}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${finalTextColor}" stroke="white" stroke-width="3" stroke-opacity="1" paint-order="stroke fill" text-anchor="middle" dominant-baseline="middle">${escapedLine}</text>`
         }).join('\n')
         
         const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -232,33 +208,28 @@ export async function POST(request: NextRequest) {
   ${svgText}
 </svg>`
         
-        // Use Sharp to convert SVG to PNG buffer
-        try {
-          const textBuffer = await sharp(Buffer.from(svg))
-            .png()
-            .toBuffer()
-          
-          // Load with Jimp for compositing
-          const textImage = await Jimp.read(textBuffer)
-          
-          // Composite text onto QR code
-          finalImage.composite(textImage, 0, 0, {
-            mode: Jimp.BLEND_SOURCE_OVER,
-            opacitySource: 1.0,
-            opacityDest: 1.0,
-          })
-          
-          console.log('Center text successfully added to QR code')
-        } catch (sharpError) {
-          console.error('Sharp SVG rendering error:', sharpError)
-          // Continue without text if Sharp fails
-          // Don't throw error, just log it
-        }
+        // Use Sharp with proper configuration for Vercel
+        const textBuffer = await sharp(Buffer.from(svg), {
+          density: 72,
+          limitInputPixels: false
+        })
+          .png()
+          .toBuffer()
+        
+        const textImage = await Jimp.read(textBuffer)
+        
+        // Composite text onto QR code
+        finalImage.composite(textImage, 0, 0, {
+          mode: Jimp.BLEND_SOURCE_OVER,
+          opacitySource: 1.0,
+          opacityDest: 1.0,
+        })
+        
+        console.log('Center text successfully added to QR code')
       } catch (textError) {
         console.error('Error processing center text:', textError)
-        // Don't return error - continue without center text
-        // This ensures QR code is still generated even if text fails
-        console.warn('Continuing QR code generation without center text due to error')
+        console.warn('Continuing QR code generation without center text')
+        // Don't throw - continue without text
       }
     }
 
