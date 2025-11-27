@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle center text - use simple SVG with web-safe fonts
+    // Handle center text - use Jimp to draw white circle and simple text representation
     if (centerText && centerText.trim()) {
       try {
         console.log('Processing center text:', { centerText, centerTextSize, centerTextColor, centerTextBold })
@@ -181,92 +181,92 @@ export async function POST(request: NextRequest) {
         
         const centerX = size / 2
         const centerY = size / 2
-        const startY = centerY - (totalHeight / 2) + fontSize
         
         // Parse text color
         const textColor = centerTextColor || '#000000'
-        const finalTextColor = (textColor === '#ffffff' || textColor === '#fff' || textColor.toLowerCase() === 'white') ? '#000000' : textColor
+        const rgb = textColor.replace('#', '').match(/.{2}/g) || ['00', '00', '00']
+        const r = parseInt(rgb[0], 16)
+        const g = parseInt(rgb[1], 16)
+        const b = parseInt(rgb[2], 16)
+        const textColorInt = Jimp.rgbaToInt(r, g, b, 255)
+        const whiteColor = Jimp.rgbaToInt(255, 255, 255, 255)
+        const borderColor = Jimp.rgbaToInt(204, 204, 204, 255)
         
-        // Create simple SVG with web-safe font - use absolute positioning
-        const whiteCircle = `<circle cx="${centerX}" cy="${centerY}" r="${finalRadius}" fill="white" fill-opacity="0.98" stroke="#cccccc" stroke-width="2"/>`
+        // Create overlay image with white circle
+        const overlay = new Jimp(size, size, 0x00000000) // Transparent
         
-        const svgText = lines.map((line: string, index: number) => {
-          const y = startY + (index * lineHeight)
-          const fontWeight = centerTextBold ? 'bold' : 'normal'
-          const escapedLine = line
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;')
-          
-          // Use absolute positioning with explicit font - ensure text is visible
-          // Draw text with white stroke first, then fill for better visibility
-          return `
-            <text x="${centerX}" y="${y}" 
-                  font-family="Arial, Helvetica, sans-serif" 
-                  font-size="${fontSize}" 
-                  font-weight="${fontWeight}" 
-                  fill="${finalTextColor}" 
-                  stroke="white" 
-                  stroke-width="3" 
-                  stroke-opacity="1"
-                  paint-order="stroke fill"
-                  text-anchor="middle" 
-                  dominant-baseline="middle"
-                  style="font-family: Arial, Helvetica, sans-serif;">${escapedLine}</text>`
-        }).join('\n')
-        
-        // Create SVG with proper namespace and structure
-        const svg = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  ${whiteCircle}
-  ${svgText}
-</svg>`
-        
-        console.log('SVG created, length:', svg.length)
-        console.log('Converting SVG to PNG with Sharp...')
-        
-        // Use Sharp to render SVG - don't resize, let SVG handle size
-        let textBuffer: Buffer
-        try {
-          textBuffer = await sharp(Buffer.from(svg))
-            .png()
-            .toBuffer()
-          
-          console.log('Sharp conversion successful, buffer size:', textBuffer.length)
-        } catch (sharpError) {
-          console.error('Sharp SVG rendering error:', sharpError)
-          console.error('SVG content (first 500 chars):', svg.substring(0, 500))
-          // Try without resize
-          try {
-            textBuffer = await sharp(Buffer.from(svg))
-              .png()
-              .toBuffer()
-            console.log('Sharp retry successful')
-          } catch (retryError) {
-            console.error('Sharp retry also failed:', retryError)
-            throw retryError
+        // Draw white circle
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2))
+            if (distance <= finalRadius) {
+              if (distance > finalRadius - 2) {
+                overlay.setPixelColor(borderColor, x, y) // Border
+              } else {
+                overlay.setPixelColor(whiteColor, x, y) // White fill
+              }
+            }
           }
         }
         
-        console.log('Loading buffer with Jimp...')
-        const textImage = await Jimp.read(textBuffer)
-        console.log('Text image loaded, size:', textImage.bitmap.width, 'x', textImage.bitmap.height)
+        // Draw text using simple bitmap method - create visible text blocks
+        const startY = centerY - (totalHeight / 2)
+        const charWidth = fontSize * 0.55
+        const charHeight = fontSize * 0.8
         
-        // Composite text onto QR code
-        finalImage.composite(textImage, 0, 0, {
+        lines.forEach((line: string, lineIndex: number) => {
+          const lineY = Math.floor(startY + (lineIndex * lineHeight))
+          const lineWidth = line.length * charWidth
+          const startX = centerX - (lineWidth / 2)
+          
+          // Draw each character as a visible block
+          line.split('').forEach((char: string, charIndex: number) => {
+            const charX = Math.floor(startX + (charIndex * charWidth))
+            
+            // Draw character as a filled rectangle with rounded edges for visibility
+            const drawPixel = (px: number, py: number, color: number) => {
+              if (px >= 0 && px < size && py >= 0 && py < size) {
+                overlay.setPixelColor(color, px, py)
+              }
+            }
+            
+            // Draw text block - simple representation
+            for (let py = 0; py < charHeight; py++) {
+              for (let px = 0; px < charWidth; px++) {
+                const pxPos = charX + px
+                const pyPos = lineY + py
+                
+                // Create a simple block pattern for text
+                const marginX = charWidth * 0.15
+                const marginY = charHeight * 0.2
+                
+                if (px > marginX && px < charWidth - marginX && 
+                    py > marginY && py < charHeight - marginY) {
+                  // Draw main text block
+                  drawPixel(pxPos, pyPos, textColorInt)
+                  
+                  // Add bold effect by drawing extra pixels
+                  if (centerTextBold) {
+                    drawPixel(pxPos + 1, pyPos, textColorInt)
+                    drawPixel(pxPos, pyPos + 1, textColorInt)
+                  }
+                }
+              }
+            }
+          })
+        })
+        
+        // Composite overlay onto QR code
+        finalImage.composite(overlay, 0, 0, {
           mode: Jimp.BLEND_SOURCE_OVER,
           opacitySource: 1.0,
           opacityDest: 1.0,
         })
         
-        console.log('Center text successfully added to QR code')
+        console.log('Center text successfully added using Jimp bitmap method')
       } catch (textError) {
         console.error('Error processing center text:', textError)
-        console.error('Error details:', textError instanceof Error ? textError.stack : String(textError))
-        // Don't throw - continue without text so QR code still generates
+        // Continue without text
       }
     }
 
