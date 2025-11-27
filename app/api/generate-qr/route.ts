@@ -5,6 +5,349 @@ import sharp from 'sharp'
 
 export const runtime = "nodejs";
 
+// Simple bitmap font for rendering text (5x7 grid per character)
+const bitmapFont: { [key: string]: number[][] } = {
+  'A': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,1,1,1,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1]
+  ],
+  'B': [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0]
+  ],
+  'C': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'D': [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0]
+  ],
+  'E': [
+    [1,1,1,1,1],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,1]
+  ],
+  'F': [
+    [1,1,1,1,1],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0]
+  ],
+  'G': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,0],
+    [1,0,1,1,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'H': [
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1]
+  ],
+  'I': [
+    [1,1,1],
+    [0,1,0],
+    [0,1,0],
+    [0,1,0],
+    [0,1,0],
+    [0,1,0],
+    [1,1,1]
+  ],
+  'J': [
+    [0,0,0,0,1],
+    [0,0,0,0,1],
+    [0,0,0,0,1],
+    [0,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'K': [
+    [1,0,0,0,1],
+    [1,0,0,1,0],
+    [1,0,1,0,0],
+    [1,1,0,0,0],
+    [1,0,1,0,0],
+    [1,0,0,1,0],
+    [1,0,0,0,1]
+  ],
+  'L': [
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,1]
+  ],
+  'M': [
+    [1,0,0,0,1],
+    [1,1,0,1,1],
+    [1,0,1,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1]
+  ],
+  'N': [
+    [1,0,0,0,1],
+    [1,1,0,0,1],
+    [1,0,1,0,1],
+    [1,0,0,1,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1]
+  ],
+  'O': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'P': [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,0,0,0,0]
+  ],
+  'Q': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,1,0,1],
+    [1,0,0,1,1],
+    [0,1,1,1,1]
+  ],
+  'R': [
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,1,1,1,0],
+    [1,0,1,0,0],
+    [1,0,0,1,0],
+    [1,0,0,0,1]
+  ],
+  'S': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,0],
+    [0,1,1,1,0],
+    [0,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'T': [
+    [1,1,1,1,1],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0]
+  ],
+  'U': [
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  'V': [
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,0,1,0],
+    [0,1,0,1,0],
+    [0,0,1,0,0]
+  ],
+  'W': [
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [1,0,1,0,1],
+    [1,1,0,1,1],
+    [1,0,0,0,1]
+  ],
+  'X': [
+    [1,0,0,0,1],
+    [0,1,0,1,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,1,0,1,0],
+    [1,0,0,0,1]
+  ],
+  'Y': [
+    [1,0,0,0,1],
+    [0,1,0,1,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0]
+  ],
+  'Z': [
+    [1,1,1,1,1],
+    [0,0,0,0,1],
+    [0,0,0,1,0],
+    [0,0,1,0,0],
+    [0,1,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,1]
+  ],
+  '0': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,1,1],
+    [1,0,1,0,1],
+    [1,1,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  '1': [
+    [0,0,1,0,0],
+    [0,1,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,0,1,0,0],
+    [0,1,1,1,0]
+  ],
+  '2': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [0,0,0,0,1],
+    [0,0,1,1,0],
+    [0,1,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,1]
+  ],
+  '3': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [0,0,0,0,1],
+    [0,1,1,1,0],
+    [0,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  '4': [
+    [0,0,0,1,0],
+    [0,0,1,1,0],
+    [0,1,0,1,0],
+    [1,0,0,1,0],
+    [1,1,1,1,1],
+    [0,0,0,1,0],
+    [0,0,0,1,0]
+  ],
+  '5': [
+    [1,1,1,1,1],
+    [1,0,0,0,0],
+    [1,0,0,0,0],
+    [1,1,1,1,0],
+    [0,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  '6': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,0],
+    [1,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  '7': [
+    [1,1,1,1,1],
+    [0,0,0,0,1],
+    [0,0,0,1,0],
+    [0,0,1,0,0],
+    [0,1,0,0,0],
+    [0,1,0,0,0],
+    [0,1,0,0,0]
+  ],
+  '8': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  '9': [
+    [0,1,1,1,0],
+    [1,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,1],
+    [0,0,0,0,1],
+    [1,0,0,0,1],
+    [0,1,1,1,0]
+  ],
+  ' ': [
+    [0,0,0,0,0],
+    [0,0,0,0,0],
+    [0,0,0,0,0],
+    [0,0,0,0,0],
+    [0,0,0,0,0],
+    [0,0,0,0,0],
+    [0,0,0,0,0]
+  ]
+}
+
+// Function to get character bitmap (uppercase and handle unknown chars)
+function getCharBitmap(char: string): number[][] {
+  const upperChar = char.toUpperCase()
+  return bitmapFont[upperChar] || bitmapFont[' '] || []
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -158,7 +501,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle center text - use Jimp to draw white circle and simple text representation
+    // Handle center text - use bitmap font for actual readable text
     if (centerText && centerText.trim()) {
       try {
         console.log('Processing center text:', { centerText, centerTextSize, centerTextColor, centerTextBold })
@@ -209,50 +552,50 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // Draw text using simple bitmap method - create visible text blocks
+        // Draw text using bitmap font - actual readable letters
+        const charWidth = 5 // Bitmap font width
+        const charHeight = 7 // Bitmap font height
+        const scale = Math.max(1, Math.floor(fontSize / 7)) // Scale factor
+        const scaledCharWidth = charWidth * scale
+        const scaledCharHeight = charHeight * scale
+        const spacing = scale // Space between characters
+        
         const startY = centerY - (totalHeight / 2)
-        const charWidth = fontSize * 0.55
-        const charHeight = fontSize * 0.8
         
         lines.forEach((line: string, lineIndex: number) => {
           const lineY = Math.floor(startY + (lineIndex * lineHeight))
-          const lineWidth = line.length * charWidth
-          const startX = centerX - (lineWidth / 2)
+          const totalLineWidth = line.length * (scaledCharWidth + spacing)
+          const startX = centerX - (totalLineWidth / 2)
           
-          // Draw each character as a visible block
+          // Draw each character using bitmap font
           line.split('').forEach((char: string, charIndex: number) => {
-            const charX = Math.floor(startX + (charIndex * charWidth))
+            const charBitmap = getCharBitmap(char)
+            const charX = Math.floor(startX + (charIndex * (scaledCharWidth + spacing)))
             
-            // Draw character as a filled rectangle with rounded edges for visibility
-            const drawPixel = (px: number, py: number, color: number) => {
-              if (px >= 0 && px < size && py >= 0 && py < size) {
-                overlay.setPixelColor(color, px, py)
-              }
-            }
-            
-            // Draw text block - simple representation
-            for (let py = 0; py < charHeight; py++) {
-              for (let px = 0; px < charWidth; px++) {
-                const pxPos = charX + px
-                const pyPos = lineY + py
-                
-                // Create a simple block pattern for text
-                const marginX = charWidth * 0.15
-                const marginY = charHeight * 0.2
-                
-                if (px > marginX && px < charWidth - marginX && 
-                    py > marginY && py < charHeight - marginY) {
-                  // Draw main text block
-                  drawPixel(pxPos, pyPos, textColorInt)
-                  
-                  // Add bold effect by drawing extra pixels
-                  if (centerTextBold) {
-                    drawPixel(pxPos + 1, pyPos, textColorInt)
-                    drawPixel(pxPos, pyPos + 1, textColorInt)
+            // Draw character from bitmap
+            charBitmap.forEach((row: number[], rowIndex: number) => {
+              row.forEach((pixel: number, colIndex: number) => {
+                if (pixel === 1) {
+                  // Draw pixel at scaled position
+                  for (let sy = 0; sy < scale; sy++) {
+                    for (let sx = 0; sx < scale; sx++) {
+                      const px = charX + (colIndex * scale) + sx
+                      const py = lineY + (rowIndex * scale) + sy
+                      
+                      if (px >= 0 && px < size && py >= 0 && py < size) {
+                        overlay.setPixelColor(textColorInt, px, py)
+                        
+                        // Add bold effect
+                        if (centerTextBold) {
+                          if (px + 1 < size) overlay.setPixelColor(textColorInt, px + 1, py)
+                          if (py + 1 < size) overlay.setPixelColor(textColorInt, px, py + 1)
+                        }
+                      }
+                    }
                   }
                 }
-              }
-            }
+              })
+            })
           })
         })
         
@@ -263,7 +606,7 @@ export async function POST(request: NextRequest) {
           opacityDest: 1.0,
         })
         
-        console.log('Center text successfully added using Jimp bitmap method')
+        console.log('Center text successfully added using bitmap font')
       } catch (textError) {
         console.error('Error processing center text:', textError)
         // Continue without text
