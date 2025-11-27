@@ -263,6 +263,7 @@ export async function POST(request: NextRequest) {
     const pngBuffer = await finalImage.getBufferAsync(Jimp.MIME_PNG)
 
     // Return PNG buffer - convert Buffer to Uint8Array for NextResponse compatibility
+    // Fixed TypeScript error by converting Buffer to Uint8Array
     return new NextResponse(new Uint8Array(pngBuffer), {
       status: 200,
       headers: {
