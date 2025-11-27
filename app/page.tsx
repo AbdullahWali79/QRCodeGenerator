@@ -5,8 +5,14 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4">
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-          Simple QR Code Generator
+          Easy QR Code Generator
         </h1>
+        <p className="text-sm md:text-base text-gray-500 mb-2">
+          Designed by Muhammad Abdullah Ai Developer
+        </p>
+        <p className="text-sm md:text-base text-gray-500 mb-2">
+          Contact # +923046983794
+        </p>
         <p className="text-xl md:text-2xl text-gray-600 mb-8">
           Create colored and background-based QR codes instantly.
         </p>

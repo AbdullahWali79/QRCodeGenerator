@@ -14,6 +14,10 @@ export default function GeneratePage() {
   const [backgroundColor, setBackgroundColor] = useState('#ffffff')
   const [logo, setLogo] = useState<File | null>(null)
   const [bgImage, setBgImage] = useState<File | null>(null)
+  const [centerText, setCenterText] = useState('')
+  const [centerTextColor, setCenterTextColor] = useState('#000000')
+  const [centerTextSize, setCenterTextSize] = useState(24)
+  const [centerTextBold, setCenterTextBold] = useState(false)
   const [qrPreview, setQrPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -104,6 +108,14 @@ export default function GeneratePage() {
         payload.bgImage = await fileToBase64(bgImage)
       }
 
+      // Add center text if provided
+      if (centerText.trim()) {
+        payload.centerText = centerText
+        payload.centerTextColor = centerTextColor
+        payload.centerTextSize = centerTextSize
+        payload.centerTextBold = centerTextBold
+      }
+
       const response = await fetch('/api/generate-qr', {
         method: 'POST',
         headers: {
@@ -113,8 +125,20 @@ export default function GeneratePage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to generate QR code' }))
-        throw new Error(errorData.error || 'Failed to generate QR code')
+        let errorMessage = 'Failed to generate QR code'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+        } catch (e) {
+          // If response is not JSON, try to get text
+          try {
+            const errorText = await response.text()
+            if (errorText) errorMessage = errorText
+          } catch (e2) {
+            // Keep default error message
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       const blob = await response.blob()
@@ -346,6 +370,87 @@ export default function GeneratePage() {
                 <option value={512}>512px</option>
                 <option value={1024}>1024px</option>
               </select>
+            </div>
+
+            {/* Center Text Section */}
+            <div className="border-t pt-6 mt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Center Text (Optional)
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Center Text
+                  </label>
+                  <textarea
+                    value={centerText}
+                    onChange={(e) => setCenterText(e.target.value)}
+                    placeholder="Enter text to display in center (supports multiple lines)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    rows={3}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Tip: Press Enter for multiple lines
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Text Color
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={centerTextColor}
+                        onChange={(e) => setCenterTextColor(e.target.value)}
+                        className="w-16 h-10 border border-gray-300 rounded cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={centerTextColor}
+                        onChange={(e) => setCenterTextColor(e.target.value)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Font Size
+                    </label>
+                    <select
+                      value={centerTextSize}
+                      onChange={(e) => setCenterTextSize(Number(e.target.value))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    >
+                      <option value={16}>16px</option>
+                      <option value={20}>20px</option>
+                      <option value={24}>24px</option>
+                      <option value={28}>28px</option>
+                      <option value={32}>32px</option>
+                      <option value={36}>36px</option>
+                      <option value={40}>40px</option>
+                      <option value={48}>48px</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={centerTextBold}
+                      onChange={(e) => setCenterTextBold(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Bold Text
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* Error Message */}
